@@ -75,49 +75,6 @@ static int write_socket(struct clientinfo* client, char* buf, int len){
     return write_len;
 }
 
-static void set_socket_keeplive_opt(int cld){
-    //禁用NAGLE算法
-    int opt_val = 1;
-    setsockopt(cld, IPPROTO_TCP, TCP_NODELAY, (void *)&opt_val, sizeof(opt_val));
-    //使用KEEPALIVE
-    int keepalive = 1; // 开启keepalive属性
-    int keepidle = 60; // 如该连接在60秒内没有任何数据往来,则进行探测
-    int keepinterval = 5; // 探测时发包的时间间隔为5 秒
-    int keepcount = 3; // 探测尝试的次数。如果第1次探测包就收到响应了,则后2次的不再发。
-    setsockopt(cld, SOL_SOCKET, SO_KEEPALIVE, (void *)&keepalive , sizeof(keepalive ));
-    setsockopt(cld, SOL_TCP, TCP_KEEPIDLE, (void*)&keepidle , sizeof(keepidle ));
-    setsockopt(cld, SOL_TCP, TCP_KEEPINTVL, (void *)&keepinterval , sizeof(keepinterval ));
-    setsockopt(cld, SOL_TCP, TCP_KEEPCNT, (void *)&keepcount , sizeof(keepcount ));
-
-    struct timeval tv;
-    tv.tv_sec = 120;
-    tv.tv_usec = 0;
-    setsockopt(cld , SOL_SOCKET , SO_RCVTIMEO , &tv , sizeof(tv));
-    setsockopt(cld , SOL_SOCKET , SO_SNDTIMEO , &tv , sizeof(tv));
-}
-
-static void* handle_connect(void* clientinfo){
-    struct clientinfo* client = (struct clientinfo*)clientinfo;
-    char buf[BUF_SIZE];
-    int read_count;
-    printf("join %s:%s\n", client->host, client->service);
-    while(1){
-        memset(buf, 0, sizeof(buf));
-        read_count = read(client->fd, buf, BUF_SIZE);
-        if(read_count >0){
-            printf("from %s:%s %s,%d\n", client->host, client->service, buf, read_count);
-            if(write(client->fd, buf, read_count) <0){
-                break;
-            };
-        }else {
-            break;
-        }
-    }
-    printf("leave %s:%s\n", client->host, client->service);
-    close(client->fd);
-    free(client);
-    return (void*)NULL;
-}
 
 static int set_socket_non_block(int fd){
     int flags, res;
@@ -204,7 +161,6 @@ int main(int argc, char* argv[]){
 //                    pthread_create(&tid, NULL, handle_connect, clientinfo);
 //                    pthread_detach(tid);
 
-                    //关心你什么时候给我发消息，但是并不在意什么时候可以跟你发消息
                     event.events = EPOLLIN | EPOLLET;
                     event.data.ptr = clientinfo;
                     ret = epoll_ctl(epfd, EPOLL_CTL_ADD,  cfd, &event);
