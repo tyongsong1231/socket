@@ -124,7 +124,7 @@ int main(int argc, char* argv[]){
         for(int i=0; i<ready; i++){
             //EPOLLERR || EPOLLHUP || !EPOLLIN
             if((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) || !(events[i].events & EPOLLIN)){
-                handle_error("error socket:");
+                perror("error socket:");
                 close(events[i].data.fd);
                 continue;
             }else if(events[i].data.fd == sfd){//new
